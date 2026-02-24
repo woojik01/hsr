@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HSR Warp Calculator</title>
+    <style>
+        :root {
+            --primary-color: #f2e6c4; /* 스타레일 골드 */
+            --bg-color: #121216;
+            --card-bg: #1e1e24;
+            --input-bg: #2a2a32;
+            --text-color: #ffffff;
+            --accent-color: #4a86e8;
+        }
+
+        body {
+            font-family: 'Pretendard', -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            width: 100%;
+            max-width: 400px;
+            border: 1px solid #333;
+        }
+
+        h2 {
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 1.5rem;
+            font-size: 1.5rem;
+        }
+
+        .lang-switch {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 5px;
+            margin-bottom: 20px;
+        }
+
+        .lang-btn {
+            background: var(--input-bg);
+            border: 1px solid #444;
+            color: #ccc;
+            padding: 5px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+
+        .lang-btn.active {
+            background: var(--accent-color);
+            color: white;
+            border-color: var(--accent-color);
+        }
+
+        .input-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            color: #bbb;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            background: var(--input-bg);
+            border: 2px solid #333;
+            border-radius: 8px;
+            color: white;
+            font-size: 1.1rem;
+            box-sizing: border-box;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            border-color: var(--accent-color);
+        }
+
+        .footer-text {
+            text-align: center;
+            margin-top: 2rem;
+            font-size: 0.85rem;
+            color: var(--primary-color);
+            font-style: italic;
+            border-top: 1px solid #333;
+            padding-top: 1rem;
+        }
+
+        .info {
+            font-size: 0.8rem;
+            color: #777;
+            text-align: center;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="lang-switch">
+        <button class="lang-btn active" onclick="setLang('ko')">KO</button>
+        <button class="lang-btn" onclick="setLang('en')">EN</button>
+        <button class="lang-btn" onclick="setLang('jp')">JP</button>
+        <button class="lang-btn" onclick="setLang('cn')">CN</button>
+    </div>
+
+    <h2 id="title">워프 계산기</h2>
+
+    <div class="input-group">
+        <label id="label-stellar">성옥 (Stellar Jade)</label>
+        <input type="number" id="stellar" placeholder="0" oninput="calcWarp()">
+    </div>
+
+    <div class="input-group">
+        <label id="label-warp">워프 횟수 (Warps)</label>
+        <input type="number" id="warp" placeholder="0" oninput="calcStellar()">
+    </div>
+
+    <div class="info" id="info-text">1 워프 = 160 성옥</div>
+
+    <div class="footer-text">
+        「여정의 끝에서 뭇별과 닿길」
+    </div>
+</div>
+
+<script>
+    const RATE = 160;
+    const translations = {
+        ko: {
+            title: "워프 계산기",
+            stellar: "성옥",
+            warp: "워프 횟수",
+            info: "1 워프 = 160 성옥",
+            footer: "「여정의 끝에서 뭇별과 닿길」"
+        },
+        en: {
+            title: "Warp Calculator",
+            stellar: "Stellar Jade",
+            warp: "Total Warps",
+            info: "1 Warp = 160 Stellar Jades",
+            footer: "“May This Journey Lead Us Starward”"
+        },
+        jp: {
+            title: "跳躍計算機",
+            stellar: "星玉",
+            warp: "跳躍回数",
+            info: "1 跳躍 = 160 星玉",
+            footer: "「旅の終着点が、無数の星々に届かんことを」"
+        },
+        cn: {
+            title: "跃迁计算器",
+            stellar: "星琼",
+            warp: "跃迁次数",
+            info: "1 跃迁 = 160 星琼",
+            footer: "「愿此行，终抵群星」"
+        }
+    };
+
+    function setLang(lang) {
+        // UI 텍스트 변경
+        document.getElementById('title').innerText = translations[lang].title;
+        document.getElementById('label-stellar').innerText = translations[lang].stellar;
+        document.getElementById('label-warp').innerText = translations[lang].warp;
+        document.getElementById('info-text').innerText = translations[lang].info;
+        document.querySelector('.footer-text').innerText = translations[lang].footer;
+
+        // 버튼 활성화 스타일
+        document.querySelectorAll('.lang-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if(btn.innerText.toLowerCase() === lang) btn.classList.add('active');
+        });
+    }
+
+    function calcWarp() {
+        const stellar = document.getElementById('stellar').value;
+        const warpInput = document.getElementById('warp');
+        if (stellar === "") {
+            warpInput.value = "";
+            return;
+        }
+        // 소수점 발생 시 내림 처리 (게임 메커니즘 반영)
+        warpInput.value = Math.floor(stellar / RATE);
+    }
+
+    function calcStellar() {
+        const warp = document.getElementById('warp').value;
+        const stellarInput = document.getElementById('stellar');
+        if (warp === "") {
+            stellarInput.value = "";
+            return;
+        }
+        stellarInput.value = warp * RATE;
+    }
+</script>
+
+</body>
+</html>
