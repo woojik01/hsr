@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Warp Simulator</title>
+    <style>
+        :root {
+            --r5: #f4d03f;
+            --r4: #a569bd;
+            --r3: #5dade2;
+            --bg: #0b0e14;
+            --card: #1c2028;
+            --text: #ffffff;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        /* Header & Controls */
+        header {
+            width: 100%;
+            padding: 15px 5%;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-sizing: border-box;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .lang-select {
+            padding: 5px 10px;
+            background: #333;
+            color: white;
+            border: 1px solid #555;
+            border-radius: 4px;
+        }
+
+        /* Stats Section */
+        .dashboard {
+            width: 90%;
+            max-width: 1000px;
+            margin: 20px 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 10px;
+            background: var(--card);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #333;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .stat-label { font-size: 0.8rem; color: #aaa; }
+        .stat-value { font-size: 1.1rem; font-weight: bold; }
+        .val-5 { color: var(--r5); }
+        .val-4 { color: var(--r4); }
+
+        /* Warp Buttons */
+        .actions {
+            margin-bottom: 30px;
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1rem;
+            transition: transform 0.1s;
+        }
+
+        .btn:active { transform: scale(0.95); }
+        .btn-1 { background: #eee; color: #000; }
+        .btn-10 { background: var(--r5); color: #000; }
+        .btn-reset { background: #cc3333; color: #fff; }
+
+        /* Results Display */
+        .display-area {
+            width: 95%;
+            max-width: 1200px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 10px;
+            padding-bottom: 100px;
+        }
+
+        .warp-card {
+            aspect-ratio: 2/3;
+            background: #252a35;
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 10px;
+            text-align: center;
+            border-bottom: 4px solid transparent;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .warp-card.grade-5 { border-color: var(--r5); background: linear-gradient(to top, #4d3d00, #252a35); }
+        .warp-card.grade-4 { border-color: var(--r4); background: linear-gradient(to top, #2d1a3d, #252a35); }
+        .warp-card.grade-3 { border-color: var(--r3); }
+
+        .card-name { font-size: 0.75rem; margin-bottom: 5px; }
+        .card-stars { color: var(--r5); font-size: 0.7rem; }
+
+        @media (max-width: 600px) {
+            .display-area { grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); }
+            .btn { padding: 10px 15px; font-size: 0.9rem; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div id="ui-title" style="font-weight: bold;">Warp Simulator</div>
+    <div style="display: flex; gap: 10px;">
+        <select class="lang-select" id="langBox" onchange="initLang()">
+            <option value="ko">한국어</option>
+            <option value="en">English</option>
+            <option value="ja">日本語</option>
+            <option value="zh">中文</option>
+        </select>
+        <button class="btn btn-reset" onclick="resetAll()" id="ui-reset">초기화</button>
+    </div>
+</header>
+
+<div class="dashboard">
+    <div class="stat-item">
+        <span class="stat-label" id="ui-total-label">총 워프</span>
+        <span class="stat-value" id="total-count">0</span>
+    </div>
+    <div class="stat-item">
+        <span class="stat-label" id="ui-pity-label">5성 천장 스택</span>
+        <span class="stat-value" id="pity-5">0 / 90</span>
+    </div>
+    <div class="stat-item">
+        <span class="stat-label" id="ui-pity4-label">4성 천장 스택</span>
+        <span class="stat-value" id="pity-4">0 / 10</span>
+    </div>
+    <div class="stat-item">
+        <span class="stat-label">5★</span>
+        <span class="stat-value val-5" id="count-5">0</span>
+    </div>
+    <div class="stat-item">
+        <span class="stat-label">4★</span>
+        <span class="stat-value val-4" id="count-4">0</span>
+    </div>
+    <div class="stat-item">
+        <span class="stat-label" id="ui-next-guarantee">다음 5성 상태</span>
+        <span class="stat-value" id="guarantee-status" style="font-size: 0.9rem;">반천장 (50%)</span>
+    </div>
+</div>
+
+<div class="actions">
+    <button class="btn btn-1" onclick="doWarp(1)" id="ui-warp1">1회 워프</button>
+    <button class="btn btn-10" onclick="doWarp(10)" id="ui-warp10">10회 워프</button>
+</div>
+
+<div class="display-area" id="display"></div>
+
+<script>
+    const i18n = {
+        ko: { title: "워프 시뮬레이터", reset: "초기화", total: "총 워프", pity5: "5성 천장 스택", pity4: "4성 천장 스택", next: "다음 5성 상태", warp1: "1회 워프", warp10: "10회 워프", fifty: "반천장 (50%)", guaranteed: "확정 (100%)", item5: "한정 5성", item5s: "상시 5성", item4: "4성 아이템", item3: "3성 광추" },
+        en: { title: "Warp Simulator", reset: "Reset", total: "Total Warps", pity5: "5* Pity", pity4: "4* Pity", next: "Next 5* Guarantee", warp1: "Warp x1", warp10: "Warp x10", fifty: "50/50 Chance", guaranteed: "Guaranteed", item5: "Limited 5*", item5s: "Standard 5*", item4: "4* Item", item3: "3* Light Cone" },
+        ja: { title: "跳躍シミュレーター", reset: "リセット", total: "累計跳躍", pity5: "星5天井", pity4: "星4天井", next: "次回の星5確定状態", warp1: "1回跳躍", warp10: "10回跳躍", fifty: "すり抜けあり(50%)", guaranteed: "確定(100%)", item5: "限定星5", item5s: "恒常星5", item4: "星4アイテム", item3: "星3光円錐" },
+        zh: { title: "跃迁模拟器", reset: "重置", total: "总跃迁", pity5: "5星保底", pity4: "4星保底", next: "下次5星状态", warp1: "跃迁 1次", warp10: "跃迁 10次", fifty: "小保底 (50%)", guaranteed: "大保底 (100%)", item5: "限定5星", item5s: "常驻5星", item4: "4星物品", item3: "3星光锥" }
+    };
+
+    let state = {
+        total: 0,
+        pity5: 0,
+        pity4: 0,
+        count5: 0,
+        count4: 0,
+        isGuaranteed: false, // 픽뚫 이후 확정권 여부
+        lang: 'ko'
+    };
+
+    function initLang() {
+        state.lang = document.getElementById('langBox').value;
+        const t = i18n[state.lang];
+        document.getElementById('ui-title').innerText = t.title;
+        document.getElementById('ui-reset').innerText = t.reset;
+        document.getElementById('ui-total-label').innerText = t.total;
+        document.getElementById('ui-pity-label').innerText = t.pity5;
+        document.getElementById('ui-pity4-label').innerText = t.pity4;
+        document.getElementById('ui-next-guarantee').innerText = t.next;
+        document.getElementById('ui-warp1').innerText = t.warp1;
+        document.getElementById('ui-warp10').innerText = t.warp10;
+        updateDashboard();
+    }
+
+    function updateDashboard() {
+        const t = i18n[state.lang];
+        document.getElementById('total-count').innerText = state.total;
+        document.getElementById('pity-5').innerText = `${state.pity5} / 90`;
+        document.getElementById('pity-4').innerText = `${state.pity4} / 10`;
+        document.getElementById('count-5').innerText = state.count5;
+        document.getElementById('count-4').innerText = state.count4;
+        document.getElementById('guarantee-status').innerText = state.isGuaranteed ? t.guaranteed : t.fifty;
+        document.getElementById('guarantee-status').style.color = state.isGuaranteed ? "var(--r5)" : "white";
+    }
+
+    function resetAll() {
+        state.total = 0; state.pity5 = 0; state.pity4 = 0;
+        state.count5 = 0; state.count4 = 0; state.isGuaranteed = false;
+        document.getElementById('display').innerHTML = '';
+        updateDashboard();
+    }
+
+    function doWarp(times) {
+        const display = document.getElementById('display');
+        display.innerHTML = ''; // 최신 결과만 표시
+
+        for (let i = 0; i < times; i++) {
+            state.total++;
+            state.pity5++;
+            state.pity4++;
+
+            // 1. 5성 확률 계산 (소프트 천장 적용)
+            let chance5 = 0.006;
+            if (state.pity5 >= 74) {
+                chance5 += 0.06 * (state.pity5 - 73); // 74회부터 약 6%씩 가산
+            }
+
+            const rand = Math.random();
+            let resultRarity = 3;
+
+            if (rand < chance5 || state.pity5 >= 90) {
+                resultRarity = 5;
+            } else if (rand < 0.051 + chance5 || state.pity4 >= 10) {
+                resultRarity = 4;
+            }
+
+            // 2. 결과 처리
+            processResult(resultRarity);
+        }
+        updateDashboard();
+    }
+
+    function processResult(rarity) {
+        const t = i18n[state.lang];
+        let name = "";
+        let finalGrade = rarity;
+
+        if (rarity === 5) {
+            state.count5++;
+            state.pity5 = 0;
+            // 반천장 로직
+            if (state.isGuaranteed) {
+                name = t.item5; // 한정 확정
+                state.isGuaranteed = false;
+            } else {
+                if (Math.random() < 0.5) {
+                    name = t.item5; // 한정 당첨
+                } else {
+                    name = t.item5s; // 픽뚫 (상시)
+                    state.isGuaranteed = true;
+                }
+            }
+        } else if (rarity === 4) {
+            state.count4++;
+            state.pity4 = 0;
+            name = t.item4;
+        } else {
+            name = t.item3;
+        }
+
+        renderCard(finalGrade, name);
+    }
+
+    function renderCard(grade, name) {
+        const display = document.getElementById('display');
+        const card = document.createElement('div');
+        card.className = `warp-card grade-${grade}`;
+        
+        let stars = "";
+        for(let i=0; i<grade; i++) stars += "★";
+
+        card.innerHTML = `
+            <div class="card-name">${name}</div>
+            <div class="card-stars">${stars}</div>
+        `;
+        display.appendChild(card);
+    }
+
+    initLang();
+</script>
+
+</body>
+</html>
